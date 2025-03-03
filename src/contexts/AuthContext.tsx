@@ -63,6 +63,16 @@ const DEMO_USER: User = {
         { symbol: 'JNJ', shares: 8, purchase_price: 160.0, purchase_date: '2023-01-20' },
         { symbol: 'PG', shares: 12, purchase_price: 140.0, purchase_date: '2023-02-25' }
       ]
+    },
+    {
+      id: 3,
+      name: 'Dividend Income',
+      stocks: [
+        { symbol: 'PFE', shares: 15, purchase_price: 45.0, purchase_date: '2023-04-10' },
+        { symbol: 'KO', shares: 20, purchase_price: 58.0, purchase_date: '2023-03-15' },
+        { symbol: 'MCD', shares: 5, purchase_price: 265.0, purchase_date: '2023-05-05' },
+        { symbol: 'VZ', shares: 12, purchase_price: 39.0, purchase_date: '2023-04-20' }
+      ]
     }
   ]
 };
