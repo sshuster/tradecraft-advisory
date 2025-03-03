@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AgGridReact } from 'ag-grid-react';
@@ -12,12 +13,12 @@ import AddStockForm from '../components/AddStockForm';
 import { useToast } from '../hooks/use-toast';
 
 // Define the type for our row data
-type PortfolioStockData = Stock & {
+interface PortfolioStockData extends Stock {
   currentPrice: number;
   currentValue: number;
   profit: number;
   profitPercentage: number;
-};
+}
 
 const Dashboard = () => {
   const { user, removeStockFromPortfolio } = useAuth();
@@ -52,8 +53,9 @@ const Dashboard = () => {
           portfolio.stocks.map(async (stock) => {
             const currentPrice = await getStockPrice(stock.symbol) || 0;
             const currentValue = currentPrice * stock.shares;
-            const profit = currentValue - (stock.purchasePrice * stock.shares);
-            const profitPercentage = (profit / (stock.purchasePrice * stock.shares)) * 100;
+            const purchaseValue = stock.purchase_price * stock.shares;
+            const profit = currentValue - purchaseValue;
+            const profitPercentage = (profit / purchaseValue) * 100;
             
             return {
               ...stock,
@@ -86,7 +88,7 @@ const Dashboard = () => {
     { field: 'symbol', headerName: 'Symbol', sort: 'asc', filter: true },
     { field: 'shares', headerName: 'Shares', filter: 'agNumberColumnFilter' },
     { 
-      field: 'purchasePrice', 
+      field: 'purchase_price', 
       headerName: 'Purchase Price',
       valueFormatter: (params) => `$${params.value.toFixed(2)}`,
       filter: 'agNumberColumnFilter'
@@ -154,7 +156,7 @@ const Dashboard = () => {
 
   // Calculate portfolio total value and profit
   const totalValue = portfolioData.reduce((sum, stock) => sum + stock.currentValue, 0);
-  const totalCost = portfolioData.reduce((sum, stock) => sum + (stock.purchasePrice * stock.shares), 0);
+  const totalCost = portfolioData.reduce((sum, stock) => sum + (stock.purchase_price * stock.shares), 0);
   const totalProfit = totalValue - totalCost;
   const totalProfitPercentage = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
 

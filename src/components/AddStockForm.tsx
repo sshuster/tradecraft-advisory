@@ -10,11 +10,16 @@ interface AddStockFormProps {
 }
 
 const AddStockForm: React.FC<AddStockFormProps> = ({ portfolioId, onSuccess }) => {
-  const [formData, setFormData] = useState<Omit<Stock, 'purchaseDate'> & { purchaseDate: string }>({
+  const [formData, setFormData] = useState<{
+    symbol: string;
+    shares: number;
+    purchase_price: number;
+    purchase_date: string;
+  }>({
     symbol: '',
     shares: 1,
-    purchasePrice: 0,
-    purchaseDate: new Date().toISOString().split('T')[0],
+    purchase_price: 0,
+    purchase_date: new Date().toISOString().split('T')[0],
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<{ symbol: string; name: string }[]>([]);
@@ -27,7 +32,7 @@ const AddStockForm: React.FC<AddStockFormProps> = ({ portfolioId, onSuccess }) =
     setFormData(prev => ({
       ...prev,
       [name]: name === 'shares' ? parseInt(value) || 0 : 
-               name === 'purchasePrice' ? parseFloat(value) || 0 : value
+               name === 'purchase_price' ? parseFloat(value) || 0 : value
     }));
   };
 
@@ -88,7 +93,7 @@ const AddStockForm: React.FC<AddStockFormProps> = ({ portfolioId, onSuccess }) =
       return;
     }
     
-    if (formData.purchasePrice <= 0) {
+    if (formData.purchase_price <= 0) {
       toast({
         title: "Error",
         description: "Purchase price must be greater than 0",
@@ -160,16 +165,16 @@ const AddStockForm: React.FC<AddStockFormProps> = ({ portfolioId, onSuccess }) =
           </div>
           
           <div>
-            <label htmlFor="purchasePrice" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="purchase_price" className="block text-sm font-medium text-gray-700 mb-1">
               Purchase Price ($)
             </label>
             <input
-              id="purchasePrice"
-              name="purchasePrice"
+              id="purchase_price"
+              name="purchase_price"
               type="number"
               step="0.01"
               min="0.01"
-              value={formData.purchasePrice}
+              value={formData.purchase_price}
               onChange={handleChange}
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
@@ -177,14 +182,14 @@ const AddStockForm: React.FC<AddStockFormProps> = ({ portfolioId, onSuccess }) =
           </div>
           
           <div>
-            <label htmlFor="purchaseDate" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="purchase_date" className="block text-sm font-medium text-gray-700 mb-1">
               Purchase Date
             </label>
             <input
-              id="purchaseDate"
-              name="purchaseDate"
+              id="purchase_date"
+              name="purchase_date"
               type="date"
-              value={formData.purchaseDate}
+              value={formData.purchase_date}
               onChange={handleChange}
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"

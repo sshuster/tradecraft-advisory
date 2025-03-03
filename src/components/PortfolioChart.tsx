@@ -11,6 +11,7 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 import { getStockHistory } from '../services/stockService';
+import { Stock } from '../contexts/AuthContext';
 
 // Types
 type ChartData = {
@@ -18,16 +19,12 @@ type ChartData = {
   value: number;
 };
 
-type PortfolioStockData = {
-  symbol: string;
-  shares: number;
-  purchasePrice: number;
-  purchaseDate: string;
+interface PortfolioStockData extends Stock {
   currentPrice: number;
   currentValue: number;
   profit: number;
   profitPercentage: number;
-};
+}
 
 type PortfolioChartProps = {
   portfolioData: PortfolioStockData[];
