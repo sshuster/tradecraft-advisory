@@ -110,7 +110,7 @@ const Login = () => {
                 Use Demo Account
               </Button>
               <p className="text-center text-sm text-muted-foreground mt-2">
-                Demo credentials: admin / admin
+                Demo credentials: admin / admin (works without backend)
               </p>
             </div>
           </CardContent>

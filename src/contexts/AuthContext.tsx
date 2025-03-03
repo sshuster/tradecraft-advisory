@@ -40,6 +40,33 @@ type AuthContextType = {
   loading: boolean;
 };
 
+// Demo user data
+const DEMO_USER: User = {
+  id: 1,
+  username: 'admin',
+  name: 'Demo Admin',
+  email: 'admin@example.com',
+  portfolios: [
+    {
+      id: 1,
+      name: 'Tech Portfolio',
+      stocks: [
+        { symbol: 'AAPL', shares: 10, purchase_price: 150.0, purchase_date: '2023-01-15' },
+        { symbol: 'MSFT', shares: 5, purchase_price: 280.0, purchase_date: '2023-02-10' },
+        { symbol: 'GOOGL', shares: 2, purchase_price: 2600.0, purchase_date: '2023-03-05' }
+      ]
+    },
+    {
+      id: 2,
+      name: 'Value Stocks',
+      stocks: [
+        { symbol: 'JNJ', shares: 8, purchase_price: 160.0, purchase_date: '2023-01-20' },
+        { symbol: 'PG', shares: 12, purchase_price: 140.0, purchase_date: '2023-02-25' }
+      ]
+    }
+  ]
+};
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode; apiUrl?: string }> = ({ 
@@ -79,6 +106,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; apiUrl?: string
   const login = async (username: string, password: string) => {
     setLoading(true);
     try {
+      // Check if this is the demo account
+      if (username === 'admin' && password === 'admin') {
+        setUser(DEMO_USER);
+        toast({
+          title: "Demo Login successful",
+          description: "You're now logged in with the demo account"
+        });
+        return true;
+      }
+      
+      // If not demo account, proceed with regular login
       const response = await axios.post('/login', { username, password });
       const userData = response.data.user;
       
