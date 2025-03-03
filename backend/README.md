@@ -26,6 +26,16 @@ This is a Flask backend for the Stock Trading Advisor application. It provides A
 
 The server will start on http://localhost:5000
 
+## Default Test User
+
+The system automatically creates a test user with the following credentials:
+- Username: `admin`
+- Password: `admin`
+
+This user has two sample portfolios:
+1. Tech Portfolio (with AAPL, MSFT, and GOOGL stocks)
+2. Value Stocks (with JNJ and PG stocks)
+
 ## API Endpoints
 
 ### Authentication

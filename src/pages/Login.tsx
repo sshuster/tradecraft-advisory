@@ -4,6 +4,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/use-toast';
 import Layout from '../components/Layout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -43,65 +46,84 @@ const Login = () => {
     }
   };
 
+  const handleDemoLogin = () => {
+    setUsername('admin');
+    setPassword('admin');
+  };
+
   return (
     <Layout>
       <div className="flex flex-col items-center justify-center min-h-[80vh]">
-        <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold">Welcome Back</h1>
-            <p className="mt-2 text-gray-600">Login to access your trading dashboard</p>
-          </div>
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-2xl text-center">Welcome Back</CardTitle>
+            <CardDescription className="text-center">
+              Login to access your trading dashboard
+            </CardDescription>
+          </CardHeader>
           
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700">Username</label>
-              <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                className="block w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                placeholder="Your username"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="block w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                placeholder="Your password"
-              />
-            </div>
-            
-            <div>
-              <button
-                type="submit"
+          <CardContent>
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <div className="space-y-2">
+                <label htmlFor="username" className="text-sm font-medium">
+                  Username
+                </label>
+                <Input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  placeholder="Your username"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-sm font-medium">
+                  Password
+                </label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="Your password"
+                />
+              </div>
+              
+              <Button 
+                type="submit" 
+                className="w-full" 
                 disabled={loading}
-                className="w-full px-4 py-2 text-white bg-primary rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50"
               >
                 {loading ? 'Logging in...' : 'Login'}
-              </button>
+              </Button>
+            </form>
+            
+            <div className="mt-4">
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                onClick={handleDemoLogin}
+              >
+                Use Demo Account
+              </Button>
+              <p className="text-center text-sm text-muted-foreground mt-2">
+                Demo credentials: admin / admin
+              </p>
             </div>
-          </form>
+          </CardContent>
           
-          <div className="text-center mt-4">
-            <p className="text-sm text-gray-600">
+          <CardFooter className="flex justify-center">
+            <p className="text-sm text-muted-foreground">
               Don't have an account?{' '}
-              <Link to="/register" className="font-medium text-primary hover:text-primary/90">
+              <Link to="/register" className="font-medium text-primary hover:underline">
                 Register here
               </Link>
             </p>
-            <p className="text-xs text-gray-500 mt-2">
-              Test account: Username: admin, Password: admin
-            </p>
-          </div>
-        </div>
+          </CardFooter>
+        </Card>
       </div>
     </Layout>
   );

@@ -17,6 +17,7 @@ export type Stock = {
   shares: number;
   purchase_price: number;
   purchase_date: string;
+  // For frontend compatibility
   purchasePrice?: number;
   purchaseDate?: string;
 };
