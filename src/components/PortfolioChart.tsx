@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   LineChart, 
   Line, 
@@ -10,7 +10,7 @@ import {
   Legend, 
   ResponsiveContainer 
 } from 'recharts';
-import { MOCK_STOCK_PRICES } from '../contexts/AuthContext';
+import { getStockHistory } from '../services/stockService';
 
 // Types
 type ChartData = {
@@ -34,48 +34,92 @@ type PortfolioChartProps = {
 };
 
 const PortfolioChart: React.FC<PortfolioChartProps> = ({ portfolioData }) => {
-  // Generate mock historical data for the portfolio
-  const generatePortfolioHistoricalData = (): ChartData[] => {
-    if (portfolioData.length === 0) return [];
-    
-    // Create an array of the last 12 months
-    const data: ChartData[] = [];
-    const today = new Date();
-    
-    for (let i = 11; i >= 0; i--) {
-      const date = new Date(today);
-      date.setMonth(today.getMonth() - i);
-      const monthYear = `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
-      
-      // Calculate portfolio value for this month
-      let monthValue = 0;
-      
-      portfolioData.forEach(stock => {
-        // Use the mock price data or fallback to current price
-        const stockPrices = MOCK_STOCK_PRICES[stock.symbol];
-        const priceIndex = stockPrices ? (11 - i) : 0;
-        const price = stockPrices ? stockPrices[priceIndex] : stock.currentPrice;
-        monthValue += price * stock.shares;
-      });
-      
-      data.push({
-        date: monthYear,
-        value: parseFloat(monthValue.toFixed(2))
-      });
-    }
-    
-    return data;
-  };
+  const [chartData, setChartData] = useState<ChartData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const chartData = generatePortfolioHistoricalData();
-  
+  useEffect(() => {
+    const fetchHistoricalData = async () => {
+      if (portfolioData.length === 0) {
+        setChartData([]);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Fetch historical data for each stock
+        const stockHistories = await Promise.all(
+          portfolioData.map(async (stock) => {
+            const history = await getStockHistory(stock.symbol, 12);
+            return { symbol: stock.symbol, shares: stock.shares, history };
+          })
+        );
+
+        // Process data for each date
+        const combinedData: Record<string, ChartData> = {};
+
+        stockHistories.forEach((stockData) => {
+          stockData.history.forEach((dataPoint: { date: string; price: number }) => {
+            const { date, price } = dataPoint;
+            
+            if (!combinedData[date]) {
+              combinedData[date] = { date, value: 0 };
+            }
+            
+            combinedData[date].value += price * stockData.shares;
+          });
+        });
+
+        // Convert to array and sort by date
+        const chartDataArray = Object.values(combinedData).sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+
+        setChartData(chartDataArray);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching portfolio history:', err);
+        setError('Failed to load portfolio history. Please try again later.');
+        setLoading(false);
+      }
+    };
+
+    fetchHistoricalData();
+  }, [portfolioData]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-full text-red-500">
+        {error}
+      </div>
+    );
+  }
+
   if (chartData.length === 0) {
     return <div className="flex justify-center items-center h-full">No data available</div>;
   }
 
+  // Format dates for better display
+  const formattedData = chartData.map(point => ({
+    ...point,
+    date: new Date(point.date).toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: '2-digit'
+    })
+  }));
+
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+      <LineChart data={formattedData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="date" />
         <YAxis 

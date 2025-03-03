@@ -15,11 +15,23 @@ import Strategies from "./pages/Strategies";
 import Market from "./pages/Market";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+// Configure API base URL based on environment
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+
+// Configure QueryClient with defaults suitable for Node.js 14
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
+    <AuthProvider apiUrl={API_BASE_URL}>
       <TooltipProvider>
         <Toaster />
         <Sonner />

@@ -1,50 +1,12 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
-
-// Mock user data
-const MOCK_USERS = [
-  {
-    id: 1,
-    username: 'admin',
-    password: 'admin',
-    name: 'Admin User',
-    email: 'admin@example.com',
-    portfolios: [
-      {
-        id: 1,
-        name: 'Tech Portfolio',
-        stocks: [
-          { symbol: 'AAPL', shares: 10, purchasePrice: 150, purchaseDate: '2023-01-05' },
-          { symbol: 'MSFT', shares: 5, purchasePrice: 280, purchaseDate: '2023-02-10' },
-          { symbol: 'GOOGL', shares: 2, purchasePrice: 2700, purchaseDate: '2023-03-15' },
-        ]
-      },
-      {
-        id: 2,
-        name: 'Value Stocks',
-        stocks: [
-          { symbol: 'JNJ', shares: 8, purchasePrice: 160, purchaseDate: '2023-01-20' },
-          { symbol: 'PG', shares: 7, purchasePrice: 140, purchaseDate: '2023-02-25' },
-        ]
-      }
-    ]
-  }
-];
-
-// Mock stock price history for charts
-export const MOCK_STOCK_PRICES = {
-  'AAPL': [150, 155, 153, 160, 165, 168, 170, 175, 172, 180, 183, 178],
-  'MSFT': [280, 285, 290, 288, 295, 300, 305, 310, 315, 318, 320, 325],
-  'GOOGL': [2700, 2720, 2750, 2780, 2800, 2820, 2850, 2880, 2900, 2950, 3000, 3050],
-  'JNJ': [160, 162, 165, 168, 166, 164, 167, 170, 172, 175, 173, 176],
-  'PG': [140, 142, 145, 148, 150, 152, 153, 155, 158, 160, 162, 165],
-};
+import axios from 'axios';
+import { toast } from '@/components/ui/use-toast';
 
 // Types
 type User = {
   id: number;
   username: string;
-  password: string;
   name: string;
   email: string;
   portfolios: Portfolio[];
@@ -53,8 +15,10 @@ type User = {
 export type Stock = {
   symbol: string;
   shares: number;
-  purchasePrice: number;
-  purchaseDate: string;
+  purchase_price: number;
+  purchase_date: string;
+  purchasePrice?: number;
+  purchaseDate?: string;
 };
 
 export type Portfolio = {
@@ -68,143 +32,300 @@ type AuthContextType = {
   login: (username: string, password: string) => Promise<boolean>;
   register: (username: string, password: string, name: string, email: string) => Promise<boolean>;
   logout: () => void;
-  addPortfolio: (name: string) => void;
-  removePortfolio: (id: number) => void;
-  addStockToPortfolio: (portfolioId: number, stock: Stock) => void;
-  removeStockFromPortfolio: (portfolioId: number, symbol: string) => void;
-  users: User[];
+  addPortfolio: (name: string) => Promise<boolean>;
+  removePortfolio: (id: number) => Promise<boolean>;
+  addStockToPortfolio: (portfolioId: number, stock: Stock) => Promise<boolean>;
+  removeStockFromPortfolio: (portfolioId: number, symbol: string) => Promise<boolean>;
+  loading: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [users, setUsers] = useState<User[]>(() => {
-    const storedUsers = localStorage.getItem('users');
-    return storedUsers ? JSON.parse(storedUsers) : MOCK_USERS;
-  });
+export const AuthProvider: React.FC<{ children: React.ReactNode; apiUrl?: string }> = ({ 
+  children, 
+  apiUrl = 'http://localhost:5000/api' 
+}) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(false);
   
-  const [user, setUser] = useState<User | null>(() => {
-    const storedUser = localStorage.getItem('currentUser');
-    return storedUser ? JSON.parse(storedUser) : null;
-  });
-
+  // Set up axios base URL
   useEffect(() => {
-    localStorage.setItem('users', JSON.stringify(users));
-  }, [users]);
+    axios.defaults.baseURL = apiUrl;
+  }, [apiUrl]);
 
+  // Load user from localStorage on initial render
   useEffect(() => {
-    localStorage.setItem('currentUser', user ? JSON.stringify(user) : '');
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error('Failed to parse stored user:', error);
+        localStorage.removeItem('user');
+      }
+    }
+  }, []);
+
+  // Update localStorage whenever user changes
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('user');
+    }
   }, [user]);
 
   const login = async (username: string, password: string) => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const foundUser = users.find(u => u.username === username && u.password === password);
-    if (foundUser) {
-      setUser(foundUser);
+    setLoading(true);
+    try {
+      const response = await axios.post('/login', { username, password });
+      const userData = response.data.user;
+      
+      // Transform data to match frontend structure if needed
+      const transformedUser = {
+        ...userData,
+        portfolios: userData.portfolios.map((portfolio: any) => ({
+          ...portfolio,
+          stocks: portfolio.stocks.map((stock: any) => ({
+            ...stock,
+            purchasePrice: stock.purchase_price,
+            purchaseDate: stock.purchase_date
+          }))
+        }))
+      };
+      
+      setUser(transformedUser);
+      toast({
+        title: "Login successful",
+        description: `Welcome back, ${transformedUser.name}!`
+      });
       return true;
+    } catch (error: any) {
+      console.error('Login error:', error);
+      const message = error.response?.data?.error || 'Login failed. Please check your credentials.';
+      toast({
+        title: "Login failed",
+        description: message,
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setLoading(false);
     }
-    return false;
   };
 
   const register = async (username: string, password: string, name: string, email: string) => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Check if username already exists
-    if (users.some(u => u.username === username)) {
+    setLoading(true);
+    try {
+      const response = await axios.post('/register', { username, password, name, email });
+      const userData = response.data.user;
+      setUser({
+        ...userData,
+        portfolios: userData.portfolios || []
+      });
+      toast({
+        title: "Registration successful",
+        description: `Welcome, ${name}!`
+      });
+      return true;
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      const message = error.response?.data?.error || 'Registration failed. Please try again.';
+      toast({
+        title: "Registration failed",
+        description: message,
+        variant: "destructive"
+      });
       return false;
+    } finally {
+      setLoading(false);
     }
-
-    const newUser: User = {
-      id: users.length + 1,
-      username,
-      password,
-      name,
-      email,
-      portfolios: []
-    };
-
-    setUsers([...users, newUser]);
-    setUser(newUser);
-    return true;
   };
 
   const logout = () => {
     setUser(null);
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out."
+    });
   };
 
-  const addPortfolio = (name: string) => {
-    if (!user) return;
+  const addPortfolio = async (name: string) => {
+    if (!user) return false;
     
-    const newPortfolio: Portfolio = {
-      id: Math.max(0, ...user.portfolios.map(p => p.id)) + 1,
-      name,
-      stocks: []
-    };
-
-    const updatedUser = {
-      ...user,
-      portfolios: [...user.portfolios, newPortfolio]
-    };
-
-    setUser(updatedUser);
-    setUsers(users.map(u => u.id === user.id ? updatedUser : u));
+    setLoading(true);
+    try {
+      const response = await axios.post('/portfolios', {
+        user_id: user.id,
+        name
+      });
+      
+      const newPortfolio = response.data.portfolio;
+      
+      setUser({
+        ...user,
+        portfolios: [...user.portfolios, newPortfolio]
+      });
+      
+      toast({
+        title: "Portfolio created",
+        description: `Portfolio "${name}" has been created successfully.`
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error('Add portfolio error:', error);
+      const message = error.response?.data?.error || 'Failed to create portfolio. Please try again.';
+      toast({
+        title: "Failed to create portfolio",
+        description: message,
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const removePortfolio = (id: number) => {
-    if (!user) return;
+  const removePortfolio = async (id: number) => {
+    if (!user) return false;
     
-    const updatedUser = {
-      ...user,
-      portfolios: user.portfolios.filter(p => p.id !== id)
-    };
-
-    setUser(updatedUser);
-    setUsers(users.map(u => u.id === user.id ? updatedUser : u));
+    setLoading(true);
+    try {
+      await axios.delete(`/portfolios/${id}`);
+      
+      const updatedUser = {
+        ...user,
+        portfolios: user.portfolios.filter(p => p.id !== id)
+      };
+      
+      setUser(updatedUser);
+      
+      toast({
+        title: "Portfolio removed",
+        description: "The portfolio has been removed successfully."
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error('Remove portfolio error:', error);
+      const message = error.response?.data?.error || 'Failed to remove portfolio. Please try again.';
+      toast({
+        title: "Failed to remove portfolio",
+        description: message,
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const addStockToPortfolio = (portfolioId: number, stock: Stock) => {
-    if (!user) return;
+  const addStockToPortfolio = async (portfolioId: number, stock: Stock) => {
+    if (!user) return false;
     
-    const updatedPortfolios = user.portfolios.map(portfolio => {
-      if (portfolio.id === portfolioId) {
-        // Check if stock already exists, update if it does
-        const existingStockIndex = portfolio.stocks.findIndex(s => s.symbol === stock.symbol);
-        
-        if (existingStockIndex >= 0) {
-          const updatedStocks = [...portfolio.stocks];
-          updatedStocks[existingStockIndex] = stock;
-          return { ...portfolio, stocks: updatedStocks };
-        } else {
-          return { ...portfolio, stocks: [...portfolio.stocks, stock] };
+    setLoading(true);
+    try {
+      const stockData = {
+        portfolio_id: portfolioId,
+        symbol: stock.symbol,
+        shares: stock.shares,
+        purchase_price: stock.purchasePrice || stock.purchase_price,
+        purchase_date: stock.purchaseDate || stock.purchase_date
+      };
+      
+      const response = await axios.post('/stocks', stockData);
+      
+      // Update user state with new stock
+      const updatedPortfolios = user.portfolios.map(portfolio => {
+        if (portfolio.id === portfolioId) {
+          // Look for existing stock to update
+          const existingStockIndex = portfolio.stocks.findIndex(s => s.symbol === stock.symbol);
+          
+          if (existingStockIndex >= 0) {
+            // Update existing stock
+            const updatedStocks = [...portfolio.stocks];
+            updatedStocks[existingStockIndex] = {
+              ...stock,
+              purchase_price: stock.purchasePrice || stock.purchase_price,
+              purchase_date: stock.purchaseDate || stock.purchase_date
+            };
+            return { ...portfolio, stocks: updatedStocks };
+          } else {
+            // Add new stock
+            return { 
+              ...portfolio, 
+              stocks: [...portfolio.stocks, {
+                ...stock,
+                purchase_price: stock.purchasePrice || stock.purchase_price,
+                purchase_date: stock.purchaseDate || stock.purchase_date
+              }] 
+            };
+          }
         }
-      }
-      return portfolio;
-    });
-
-    const updatedUser = { ...user, portfolios: updatedPortfolios };
-    setUser(updatedUser);
-    setUsers(users.map(u => u.id === user.id ? updatedUser : u));
+        return portfolio;
+      });
+      
+      setUser({ ...user, portfolios: updatedPortfolios });
+      
+      toast({
+        title: "Stock added",
+        description: `${stock.symbol} has been added to your portfolio.`
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error('Add stock error:', error);
+      const message = error.response?.data?.error || 'Failed to add stock. Please try again.';
+      toast({
+        title: "Failed to add stock",
+        description: message,
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const removeStockFromPortfolio = (portfolioId: number, symbol: string) => {
-    if (!user) return;
+  const removeStockFromPortfolio = async (portfolioId: number, symbol: string) => {
+    if (!user) return false;
     
-    const updatedPortfolios = user.portfolios.map(portfolio => {
-      if (portfolio.id === portfolioId) {
-        return {
-          ...portfolio,
-          stocks: portfolio.stocks.filter(stock => stock.symbol !== symbol)
-        };
-      }
-      return portfolio;
-    });
-
-    const updatedUser = { ...user, portfolios: updatedPortfolios };
-    setUser(updatedUser);
-    setUsers(users.map(u => u.id === user.id ? updatedUser : u));
+    setLoading(true);
+    try {
+      await axios.delete(`/stocks/${portfolioId}/${symbol}`);
+      
+      // Update user state
+      const updatedPortfolios = user.portfolios.map(portfolio => {
+        if (portfolio.id === portfolioId) {
+          return {
+            ...portfolio,
+            stocks: portfolio.stocks.filter(stock => stock.symbol !== symbol)
+          };
+        }
+        return portfolio;
+      });
+      
+      setUser({ ...user, portfolios: updatedPortfolios });
+      
+      toast({
+        title: "Stock removed",
+        description: `${symbol} has been removed from your portfolio.`
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error('Remove stock error:', error);
+      const message = error.response?.data?.error || 'Failed to remove stock. Please try again.';
+      toast({
+        title: "Failed to remove stock",
+        description: message,
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const contextValue: AuthContextType = {
@@ -216,7 +337,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     removePortfolio,
     addStockToPortfolio,
     removeStockFromPortfolio,
-    users,
+    loading
   };
 
   return (
